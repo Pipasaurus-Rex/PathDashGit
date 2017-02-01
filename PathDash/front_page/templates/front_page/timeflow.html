@@ -1,0 +1,26 @@
+{% extends "nav_bar.html" %}
+{% block content %}
+<style>
+.divbox{
+	width: 40%;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    text-align: center;
+	margin-left:5%;
+	margin-right:5%;
+}
+</style>
+<body>
+<h4>Time Analysis</h4>
+<p>It is important that pathology requests from accident and emergency are processed and viewed quickly.</p>
+<div class="divbox" style="float:left;">
+Here we have visualised the time taken for samples to travel to the lab, be processed and then viewed over a time period
+{% load staticfiles %}
+<a href="../graphs/timeflow/"><img src ="{% static "images/timeflow.png" %}" alt="My image" style="width: 100%;"/></a>
+</div>
+<div class="divbox" style="float:right;">
+Here we will look into samples not viewed before patient discharge, but I haven t built the graphs yet
+</div>
+</body>
+
+
+{% endblock %}

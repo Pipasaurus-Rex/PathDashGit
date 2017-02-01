@@ -1,0 +1,25 @@
+{% extends "nav_bar.html" %}
+{% block content %}
+<style>
+.divbox{
+	width: 40%;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    text-align: center;
+	margin-left:5%;
+	margin-right:5%;
+}
+</style>
+<body>
+<h3>Here we have investigated the cost of pathology testing with respect to requesting levels, and will investigate more into the total cost of testing per patient or clinician</h3>
+<div class="divbox" style="float:left;">
+{% load staticfiles %}
+Here we have visualised relative cost/ requesting levels and department spending as a Bubble Chart.
+<a href="../AE/costs_bubble/"><img src ="{% static "images/cost_bubble.png" %}" alt="My image" style="width: 100%;"/></a>
+</div>
+<div class="divbox" style="float:left;">
+Looking at costs over <a href="../AE/clin/costxtime/">time</a>
+</div>
+</body>
+
+
+{% endblock %}

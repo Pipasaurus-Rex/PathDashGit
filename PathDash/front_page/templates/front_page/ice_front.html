@@ -1,0 +1,26 @@
+{% extends "nav_bar.html" %}
+{% block content %}
+<style>
+.divbox{
+	width: 40%;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    text-align: center;
+	margin-left:5%;
+	margin-right:5%;
+}
+</style>
+<body>
+<div class="divbox" style="float:left;">
+{% load staticfiles %}
+<p>Here we are Investigating the Numbers and Percentages of A+E requests made through ICE</p>
+<a href="../AE/ice_n"><img src ="{% static "images/ice_n.png" %}" alt="My image" style="width: 100%;"/></a>
+</div>
+<div class="divbox" style="float:right;">
+{% load staticfiles %}
+<p>Here we are Investigating the Numbers and Percentages of A+E requests made through ICE inc SAU,PAU,MAU, AMU</p>
+<a href="../AE/ice"><img src ="{% static "images/ice.png" %}" alt="My image" style="width: 100%;"/></a>
+</div>
+</body>
+
+
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "gp_nav_bar.html" %}
+{% block content %}
+<script src="//d3js.org/d3.v3.min.js"></script>
+<style>
+.info-box {
+	border-radius:25px;
+	border-color:white;
+	padding: 5px;
+	border-width:10px;
+	height:300px;
+	border-style:solid;
+	position: relative;
+	display:inline;
+	float:left;
+}
+.row-container {
+	position: relative;
+	width:100%;
+	height:auto; 
+	padding:5px; 
+	margin-left:5px;
+}
+.sub-title {
+	font-weight:bold;
+	text-decoration: underline;
+	padding-left:10px;
+}
+.report-link {
+	color: black;
+}
+a:link {color: #000000; text-decoration: underline; }
+a:active {color: #0000ff; text-decoration: underline; }
+a:visited {color: #008000; text-decoration: underline; }
+a:hover {color: #ff0000; text-decoration: none; }
+</style>
+<body>
+<div class="row-container" style="">
+	<div class="info-box" style="width:40%; background-color:#00e600;">
+	<h5><strong>Welcome to The Pathology GP Requesting Dashboard!</strong></h5>
+	<p>This Dashboard is being developed to help visualise pathology requesting data to enable a more streamlined pathology service.
+	</br>We hope that use of this dashboard will help to reduce un-necessary pathology requesting and increase efficiency.
+	</br>This Dashboard is also being used for the dashboard creator Pip Croxford's MSc Project in Health Informatics.
+	</br>For any queries relating to this dashboard please contact her at pip.croxford@heartofengland.nhs.uk .</p>
+	</div>
+	<div class="info-box" style="width:60%; background-color:red;">
+	<h4 class="sub-title">News</h4>
+
+	</div>
+</div>
+{% load staticfiles %}
+<div class="row-container" style="">
+	<div class="info-box" style="width:33%; background-color: #e600ac;">
+	<h4 class="sub-title">Key Dates</h4>
+	<p>GP Forum Presentation(Solihull) - 12th January 1:30pm, Renewal Centre, Lode Lane</p>
+	<p>GP Forum Presentation(Birmingham) - 16th January 1pm, Blakesley Hall, Blakesley Road</p>
+	</div>
+	<div class="info-box" style="width:33%; background-color: #ff9900;">
+	<h4 class="sub-title">Future Updates</h4>
+	<p>Investigating the Number of requests made through ICE.</p>
+	<p>Investigating the Time taken for samples to be received, and reported.</p>
+	</div>
+	<div class="info-box" style="width:33%; background-color: #0066ff; display:inline; position: relative;">
+	<h4 class="sub-title">Useful Documents</h4>
+	<p class="report-link"><a href="{% static "Documents/Gp_intro_compat.doc" %}" alt="My image">Access Guide</a></p>
+	</div>
+</div>
+</body>
+<script>
+var ice={{ice_percent|safe}};
+var iceperc = d3.select("#iceperc")
+	.selectAll("div")
+	.data([1])
+	.enter()
+	.append("div");		
+iceperc.text(ice + " %").style("font-size","25px");
+
+</script>
+{% endblock %}

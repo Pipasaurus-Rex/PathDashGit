@@ -1,0 +1,28 @@
+{% extends "nav_bar.html" %}
+{% block content %}
+<style>
+.divbox{
+	width: 40%;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    text-align: center;
+	margin-left:5%;
+	margin-right:5%;
+}
+</style>
+<body>
+<h1>Investigating the use of bundles through ICE requesting.</h1>
+<p>Methods of calculating bundle use and defining admission type are going to be explained <a href="./info/">here</a></p>
+<div class="divbox" style="float:left;">
+{% load staticfiles %}
+<p>BUNDLES!?!?!</p>
+<a href="../AE/bundles/"><img src ="{% static "" %}" alt="My image" style="width: 100%;"/></a>
+</div>
+<div class="divbox" style="float:right;">
+{% load staticfiles %}
+<p>Nothing here yet</p>
+<a href="../AE/ice"><img src ="{% static "" %}" alt="My image" style="width: 100%;"/></a>
+</div>
+</body>
+
+
+{% endblock %}

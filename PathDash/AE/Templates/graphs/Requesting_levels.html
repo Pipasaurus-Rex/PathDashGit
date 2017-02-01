@@ -1,0 +1,151 @@
+{% extends "nav_bar.html" %}
+{% block content %}
+<script src="//d3js.org/d3.v3.min.js"></script>
+<style>
+.axis path,
+.axis line {
+	fill: none;
+	stroke: black;
+	shape-rendering: crispEdges;
+}
+.axis text {
+	font-family: sans-serif;
+	font-size: 11px;
+}
+.axis_label{
+	font-family: sans-serif;
+	font-size: 11px;
+}
+.title {
+	font-family: sans-serif;
+	font-size: 14px;
+	text-decoration: underline;
+	text-anchor: middle;
+	font-weight: bold;
+}
+.sidebox{
+	width:20%;
+	background-color:#ccffff; 
+	float:right;
+}
+.date_input{
+	height:20px;
+	width:130px;
+}
+
+</style>
+<body>
+<form action="./" method="get" class="form">
+Start Date:
+<input class="date_input" type="date" name="start" id="start" min="2016-07-01" value={{start}} />
+End Date:
+<input class="date_input" type="date" name="end" min="2016-07-01" value={{end}} />
+Individual:
+<select name="clin" value={{clin}} />
+<option value={{clin}}>{{clin}}</option>
+<option value="All">All</option>
+{% for item in clinician_list %}
+<option value="{{item}}">{{item}}</option>
+{% endfor %}
+</select>
+<input type="submit" value="Submit" />
+</form>
+<svg class="chart"></svg>
+<div class="sidebox">
+<p>We have 3 methods of Finding Requesting Levels to Choose From</p>
+<p id="ice"><strong>1. ICE Requesting</strong>
+<br>These levels are taken from the ICE ordering system, and miss a significant number of tests not ordered through ICE.</p>
+<p id="clin"><strong>2. Attending Clinician</strong>
+<br>These tests were requested during an A+E attendance where this was the attending clinician.</p>
+<p id="con"><strong>3. Consultant Code</strong>
+<br>These tests were requested from A+E with this Consultant Code.</p>
+<p><strong>Click To Choose Method</strong></p>
+</div>
+</body>
+<script>
+var source="{{source|safe}}";
+parseDate = d3.time.format("%Y-%m-%d").parse;
+formatDate = d3.time.format("%d-%m-%Y");
+var data={{data|safe}},
+	start="{{start|safe}}",
+	end="{{end|safe}}",
+	clin="{{clin|safe}}";
+	
+if(data.length>20) {var setlength=20;} else {var setlength=data.length;};
+
+var margin = {top: 40, right: 30, bottom: 30, left: 60},
+    width = $(window).width()*0.75 - margin.left - margin.right,
+    height = 600 - margin.top - margin.bottom
+	barWidth = width/(setlength);	
+	
+var y = d3.scale.linear()		//creating x/y pixel scalers
+    .domain([data[0][2],0])
+    .range([0, height]);
+var x = d3.scale.ordinal()
+	.domain(_.map(data, function(d,i){return data[i][0]}).slice(0,setlength))
+	.rangePoints([0, width],1);
+	
+<!--Initialising axises-->
+var xAxis = d3.svg.axis().scale(x).orient('bottom'),
+	yAxis = d3.svg.axis().scale(y).orient('left').tickSize(1);
+
+var chart = d3.select(".chart")		//initialising chart svg
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom);
+	
+var bar = chart.selectAll("g")		//putting in g bar placements for each data point
+	.data(_.range(setlength))
+	.enter().append("g")
+	.attr("transform", function(d, i) { return "translate(" + (margin.left + 2 + (i * barWidth)) + "," + margin.top + ")"; });
+	
+bar.append("rect")
+	.attr("class", "bars")
+	.attr("y", function(d,i){return y(data[i][2]);})
+	.attr("width", barWidth-5)
+	.attr("height", function(d,i){return height-y(data[i][2]);})
+	.attr("fill", "blue");
+	
+<!--adding axis-->
+chart.append("g")		//x axis  DONT PUT STROKE IN makes text look shitty if axis lines missing do seperately
+	.attr("class", "x axis")
+	.attr("transform", "translate( "+ margin.left +"," + (height + margin.top) +")")
+	.call(xAxis);
+
+chart.append("g")		//y axis
+	.attr("class", "y axis")
+	.attr("transform", "translate("+ (margin.left - 2) +"," + margin.top +")")
+	.call(yAxis);
+
+chart.append("text")	//x axis label
+	.attr("class", "axis_label")
+	.attr("x", width/2+margin.left)
+	.attr("y", height + margin.top + margin.bottom)
+	.style("text-anchor", "middle")
+	.text("Pathology Test Code");
+
+chart.append("text")	//y axis label
+	.attr("class", "axis_label")
+	.attr("transform", "translate("+(margin.left/2) +","+(height/2 + margin.top)+")rotate(270)")	//without this rotates relative to 0,0 on shart which loses the text off screen... LAME!!
+	.style("text-anchor", "middle")
+	.text("Count of Pathology Tests");
+
+if(source=="ice") {var title="A Count of Pathology Tests Requested Between " + formatDate(parseDate(start)) +" and "+ formatDate(parseDate(end)) + " by " +clin+ " through ICE Requesting";
+document.getElementById("ice").style.textDecoration="underline"
+} else if (source=="con") {var title="A Count of Pathology Tests Requested Between " + formatDate(parseDate(start)) +" and "+ formatDate(parseDate(end)) + " on A+E Patients Attended by "+clin;
+document.getElementById("con").style.textDecoration="underline"}
+else if (source=="clin") {var title="A Count of Pathology Tests Requested Between " + formatDate(parseDate(start)) +" and "+ formatDate(parseDate(end)) + " on A+E Patients Attended by "+clin;
+document.getElementById("clin").style.textDecoration="underline"};
+	
+chart.append("text")	//Chart Title
+	.attr("class", "chart_title")
+	.attr("x", width/2 + margin.left)
+	.attr("y", margin.top/2)
+	.style("text-anchor", "middle")
+	.text(title);
+
+document.getElementById("ice").onclick = function(){window.location=("/AE/ice/requesting_levels/?start=" + start + "&end="+end)};
+document.getElementById("clin").onclick = function(){window.location=("/AE/clin/requesting_levels/?start=" + start + "&end="+end)};
+document.getElementById("con").onclick = function(){window.location=("/AE/con/requesting_levels/?start=" + start + "&end="+end)};
+
+</script>
+{% endblock %}

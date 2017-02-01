@@ -2,6 +2,10 @@
 Thumbs.db
 ehthumbs.db
 
+#secret settings!
+secret_settings.py
+secret_settings.pyc
+
 # Folder config file
 Desktop.ini
 

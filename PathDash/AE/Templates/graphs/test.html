@@ -1,0 +1,50 @@
+{% extends "nav_bar.html" %}
+{% block content %}
+	<script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+ 
+<!-- Include Date Range Picker -->
+<script type="text/javascript" src="//cdn.jsdelivr.net/bootstrap.daterangepicker/2/daterangepicker.js"></script>
+<link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/bootstrap.daterangepicker/2/daterangepicker.css" />
+<style>
+.sidebox{
+	width:20%;
+	float:right;
+	padding:5px;
+}
+.chart(
+	background-color:blue;
+	float:left;
+)
+</style>
+<body>
+<svg class="chart"></svg>
+<div class="sidebox">
+<h3>Viewing Options</h3>
+<h4>X Axis Options</h4>
+<div class="xvar" id="cons">View by Consultant</div>
+<div class="xvar" id="clin">View by Clinician</div>
+<div class="xvar" id="loc">View by Discharge</div>
+<br>
+<h4>Data Options</h4>
+<div class="dataopt" id="b4dis">View Tests Added Before Discharge</div>
+<div class="dataopt" id="afterdis">View Tests Added After Discharge</div>
+<div class="dataopt" id="bothdis">View Both</div>
+<div></div>
+
+</div>
+</body>
+<script>
+var margin = {top: 40, right: 30, bottom: 30, left: 60},
+    width = $(window).width()*0.8 - margin.left - margin.right,	
+	height = $(window).height()*0.8 - margin.top - margin.bottom
+	barWidth = width/20;		 
+		 
+var chart = d3.select(".chart")		//initialising chart svg
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+	.attr("class", "contar");
+</script>
+
+{% endblock %}
+

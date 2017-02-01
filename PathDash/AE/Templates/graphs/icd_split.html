@@ -1,0 +1,231 @@
+{% extends "nav_bar.html" %}
+{% block content %}
+<script src="//d3js.org/d3.v3.min.js"></script>
+<style>
+.axis path,
+.axis line {
+	fill: none;
+	stroke: black;
+	shape-rendering: crispEdges;
+}
+.axis text {
+	font-family: sans-serif;
+	font-size: 11px;
+}
+.axis_label{
+	font-family: sans-serif;
+	font-size: 11px;
+}
+.title {
+	font-family: sans-serif;
+	font-size: 14px;
+	text-decoration: underline;
+	text-anchor: middle;
+	font-weight: bold;
+}
+.date_input{
+	height:20px;
+	width:130px;
+}
+.text_input{
+	height:20px;
+	width:70px;
+}
+.sidebox{
+	width:20%;
+	background-color:#ccffff; 
+	float:right;
+	padding:5px;
+	font-size:11px;
+}
+.button {
+	height:30px;
+	background-color:#ccffff; 
+	margin:5px;
+	padding:5px;
+	border: 2px solid red;
+	border-radius: 5px;
+	float:left;
+	
+}
+</style>
+<body>
+<form action="/AE/icd_split/" method="get">
+Start Date: 
+<input class="date_input" type="text" name="start" id="datepicker1" min="2016-07-01" value={{start}}>
+End Date:
+<input class="date_input" type="text" name="end" id="datepicker2" min="2016-07-01" value={{end}}> 
+<input type="submit" value="Submit" />
+</form>
+
+<svg class="chart"></svg>
+<div class ="sidebox" id = "sidebox">
+<h3>Diagnosis Type</h3>
+<p>Taken from ICD10 Diagnosis Prefix</p>
+</div>
+<div class="Botbar" style="width:100%; padding:5px;">
+<div id="back" class="button"><p>Go Back 10 Tests</p></div><div class="button" id="forward"><p>View Next 10 Tests</p></div>
+<div>
+</body>
+<script>
+var data={{data|safe}},
+	icds={'NoDiagnosis':'No Diagnosis', 'AB':'Infectious and Parasitic Diseases', 'C':'Neoplasms', 'D':'Neoplasms, Blood, Blood-forming Organs', 'E':'Endocrine, Nutritional, Metabolic', 'F':'Mental and Behavioral Disorders', 'G':'Nervous System', 'H':'Eye and Adnexa, Ear and Mastoid Process', 'I':'Circulatory System', 'J':'Respiratory System', 'K':'Digestive System', 'L':'Skin and Subcutaneous Tissue', 'M':'Musculoskeletal and Connective Tissue', 'N':'Genitourinary System', 'O': 'Pregnancy, Childbirth and the Puerperium', 'P':'Certain Conditions Originating in the Perinatal Period', 'Q': 'Congenital Malformations, Deformations and Chromosomal Abnormalities', 'R':  'Symptoms, Signs and Abnormal Clinical and Lab Findings', 'S':  'Injury, Poisoning, Certain Other Consequences of External Causes', 'T':  'Injury, Poisoning, Certain Other Consequences of External Causes', 'VWXY':  'External Causes of Morbidity', 'Z': 'Factors Influencing Health Status and Contact with Health Services'},
+	start_index=0,
+	setlength=20,
+	start="{{start|safe}}",
+	end="{{end|safe}}";
+
+var set_list=_.keys(data),
+	sort_list=set_list.sort(function(first, second) {return data[second]['total'] - data[first]['total']})
+	
+parseDate = d3.time.format("%Y-%m-%d").parse;
+formatDate = d3.time.format("%d-%m-%Y");	
+	
+var margin = {top: 40, right: 30, bottom: 50, left: 60},
+    width = $(window).width()*0.78 - margin.left - margin.right,	
+	height = $(window).height()*0.8 - margin.top - margin.bottom;
+	barWidth = width/setlength;
+	
+function draw(first, last) {		
+var num_bars=last-first,
+	barWidth = width/num_bars,
+    test_arr=sort_list.slice(first, last);	
+	
+var y = d3.scale.linear()
+    .domain([data[test_arr[0]]['total'],0])
+    .range([0, height]);
+var x = d3.scale.ordinal()
+    .domain(test_arr)
+    .rangePoints([0, width],1);	
+
+<!--Initialising axises-->
+var xAxis = d3.svg.axis().scale(x).orient('bottom');	
+var yAxis = d3.svg.axis().scale(y).orient('left').tickSize(5); 
+
+var chart = d3.select(".chart")		//initialising chart svg
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+	
+// Add a group for each column.
+var bargroup = chart.selectAll("g.bargroup")
+	.data(test_arr)
+	.enter().append("svg:g")
+	.attr("class", "bargroup")
+	.attr("transform", function(d, i) { return "translate(" + (margin.left + (i * barWidth)) + "," + margin.top + ")"; });	
+	
+var colour=["#80F31F", "#D5078E", "#01BECA", "#E49C03", "#6917ED", "#3BFD5B", "#FA2E48", "#0F79F5", "#ABDA09", "#B001B9", "#0CE0A2", "#F97014", "#4036FC", "#64FC33", "#E71273", "#02A5DE", "#D1B601", "#850ADC", "#26F776", "#FE4531", "#1E5EFD", "#91EB15"]
+
+var y_val=Array(num_bars);
+for(i=0; i<num_bars; i++) {y_val[i]=0};
+
+for (k=0; k<_.keys(icds).length; k++) {
+	for(x=0; x<num_bars; x++) {if (data[test_arr[x]][_.keys(icds)[k]]>0) {y_val[x]+=data[test_arr[x]][_.keys(icds)[k]];}}			
+bargroup.append("rect")
+	.attr("y", function(d,i) {return y(y_val[i]);})
+	.attr("class", _.keys(icds)[k])
+	.attr("height", function(d,i) {return height-y(data[d][_.keys(icds)[k]]);})
+	.attr("width", barWidth)
+	.attr("stroke", "white")
+	.attr("fill", colour[k])
+	.on("mouseover", function (d,i) {mouseover(this.getAttribute('class'));})
+	.on("mouseout", function (d,i) {mouseout(this.getAttribute('class'));});
+};
+	
+bargroup.append("text")		//Adding empty groups above bars for counting
+	.attr("class", "count")
+	.style("text-anchor", "middle")
+	.attr("transform", function(d,i) {return "translate("+(barWidth/2)+", "+ (y(y_val[i]) - 5) +")"})
+	.text("");
+
+<!--adding axis-->
+chart.append("g")		//x axis  DONT PUT STROKE IN makes text look shitty if axis lines missing do seperately
+	.attr("class", "x axis")
+	.attr("transform", "translate( "+ margin.left +"," + (height + margin.top) +")")
+	.call(xAxis)
+	.selectAll("text")
+	.attr("class", "xtext")
+	.style("text-anchor", "start")
+	.attr("transform", "translate(" + 12 +", 5)rotate(90)");
+
+chart.append("g")		//y axis
+	.attr("class", "y axis")
+	.attr("transform", "translate("+ (margin.left - 2) +"," + margin.top +")")
+	.call(yAxis);
+	
+chart.append("text")	//x axis label
+	.attr("class", "axis_label")
+	.attr("x", width/2+margin.left)
+	.attr("y", height + margin.top + margin.bottom)
+	.style("text-anchor", "middle")
+	.text("Test Code");
+
+chart.append("text")	//y axis label
+	.attr("class", "axis_label")
+	.attr("transform", "translate("+(margin.left/2) +","+(height/2 + margin.top)+")rotate(270)")	//without this rotates relative to 0,0 on shart which loses the text off screen... LAME!!
+	.style("text-anchor", "middle")
+	.text("Count of Tests");	
+	
+chart.append("text")	//chart title 1
+	.attr("class", "title")
+	.attr("x", width/2 + margin.left)
+	.attr("y", margin.top/2-10)
+	.style("text-anchor", "middle")
+	.text("Barplot of Pathology Tests Requested by A+E Consultants Between " + formatDate(parseDate(start)) + " and " + formatDate(parseDate(end)));	
+	
+chart.append("text")	//chart title 2
+	.attr("class", "title")
+	.attr("x", width/2 + margin.left)
+	.attr("y", margin.top/2+5)
+	.style("text-anchor", "middle")
+	.text("Divided By ICD10 Code Prefix");	
+	
+var key = d3.select("#sidebox")
+	.selectAll("div")
+	.data(_.keys(icds))
+	.enter()
+	.append("div");
+	
+key.attr("height", 20)
+	.style("background-color", function(d,i) {return colour[i];})
+	.attr("class", function(d,i) {return d;})
+	.attr("id", function(d) {return d})
+	.text(function(d){return icds[d]})
+	.on("mouseover", function(d,i) {return mouseover(d)})
+	.on("mouseout", function(d,i) {return mouseout(d)});
+};
+
+function redraw(first, last) {d3.selectAll(".axis_label").remove();d3.selectAll("g").remove();d3.selectAll(".n_text").remove();draw(first, last);};
+draw(0,20);
+
+function mouseover(icd) {
+var temp_class="."+icd; 
+d3.selectAll(temp_class).style("stroke", "yellow").style("stroke-width", 4);
+d3.selectAll(".count").text(function (d,i) {return data[d][icd]});
+d3.select("#"+icd).style("font-size", "20px");
+};
+
+function mouseout(icd) {
+var temp_class="."+icd; 
+d3.selectAll(temp_class).style("stroke", "white").style("stroke-width", 1);
+d3.selectAll(".count").text("");
+d3.select("#"+icd).style("font-size", "11px");
+}
+	
+var back_button = document.getElementById('back'),
+	forward_button = document.getElementById('forward');
+	
+
+forward_button.onclick = function () {
+	start_index+=10;
+	redraw(start_index, start_index+20);
+	};
+
+back_button.onclick = function () {
+	if (start_index>0) {start_index=start_index-10;};
+	redraw(start_index, start_index+20);
+	};
+
+
+
+</script>
+{% endblock %}

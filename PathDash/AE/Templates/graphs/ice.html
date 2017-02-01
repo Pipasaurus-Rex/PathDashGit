@@ -1,0 +1,126 @@
+{% extends "nav_bar.html" %}
+{% block content %}
+<script src="//d3js.org/d3.v3.min.js"></script>
+<style>
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+div.tooltip {
+	padding-top: 10px;
+	padding-left: 10px;
+	padding-right: 10px;
+    background: white;
+    border:solid black;
+    position: absolute;
+    text-align:center;
+	font-family: sans-serif;
+}
+.sidebox{
+	width:20%;
+	background-color:#ccffff; 
+	float:right;
+	padding:5px;
+}
+</style>
+<body>
+<form action="/AE/ice_n/" method="get">
+Start Date: 
+<input class="date_input" type="text" name="start" id="datepicker1" min="2016-07-01" value={{start}}>
+End Date:
+<input class="date_input" type="text" name="end" id="datepicker2" min="2016-07-01" value={{end}}> 
+<input type="submit" value="Submit" />
+</form>
+<svg class="chart"></svg>
+<div class="sidebox" id="sidebox">
+<h1>Total % ICE Requested</h1>
+<div id="totalp"></div>
+</div>
+</body>
+<script>
+parseDate = d3.time.format("%Y-%m-%d").parse //date parser
+formatDate = d3.time.format("%d-%m-%Y");
+
+var data={{data|safe}},
+	dates=_.keys(data).sort(),
+    start="{{start|safe}}",
+	end="{{end|safe}}";
+
+var margin = {top: 40, right: 30, bottom: 100, left: 60},
+    width = $(window).width()*0.75 - margin.left - margin.right,
+    height = 600 - margin.top - margin.bottom;
+	
+var chart = d3.select(".chart")		//initialising chart svg
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom);
+	
+var y = d3.scale.linear()	//creating x/y pixel scalers
+    .domain([100 ,0])
+    .range([0, height]);
+var x = d3.time.scale()
+	.domain([parseDate(dates[0]), parseDate(dates[dates.length-1])])
+	.range([0, width]);
+
+var xAxis = d3.svg.axis().scale(x).orient('bottom'),
+	yAxis = d3.svg.axis().scale(y).orient('left').tickSize(1);	
+	
+var	totalfunc = d3.svg.line()
+	.x(function(d) { return x(parseDate(dates[d])); })
+	.y(function(d) { return y((data[dates[d]].ice*100)/data[dates[d]].total); })
+	.interpolate("linear");
+
+chart.append("path")	
+	.attr("class", "line")
+	.attr("d", totalfunc(_.range(dates.length)))
+	.attr("stroke", "blue")
+	.attr("stroke-width", 1)
+	.attr("fill", "none")
+	.attr("transform", "translate(" + margin.left +","+ margin.top +")");
+	
+chart.append("g")		//y axis
+		.attr("class", "axis")
+		.attr("transform", "translate("+ (margin.left) +"," + margin.top +")")
+		.call(yAxis);
+
+chart.append("g")		//x axis
+		.attr("class", "axis")
+		.attr("transform", "translate( "+ margin.left +"," + (height + margin.top) +")")
+		.call(xAxis)
+		.selectAll("text")
+		.style("text-anchor", "start")
+		.attr("transform", "rotate(45)");	
+	
+chart.append("text")	//y axis label
+	.attr("class", "axis_label")
+	.attr("transform", "translate("+((margin.left/2)-10) +","+(height/2 + margin.top)+")rotate(270)")	//without this rotates relative to 0,0 on shart which loses the text off screen... LAME!!
+	.style("text-anchor", "middle")
+	.text("Percent of Requests made with ICE");		
+	
+chart.append("text")
+	.attr("class", "chart_title")
+	.attr("x", width/2 + margin.left)
+	.attr("y", margin.top/2)
+	.style("text-anchor", "middle")
+	.text("Percentage of A+E Requests Made Using ICE Between " + formatDate(parseDate(start)) +" and "+ formatDate(parseDate(end)));
+	
+var totalp = d3.select("#totalp")
+	.selectAll("div")
+	.data([1])
+	.enter()
+	.append("div");		
+
+var totalice = 0;
+var totalall = 0;
+for(i=0; i<dates.length; i++) {totalice+=data[dates[i]].ice; totalall+=data[dates[i]].total;};	
+
+
+totalp.text(Math.round(totalice*100/totalall) + " %").style("font-size","25px");		
+	
+	
+	
+	
+	
+</script>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "nav_bar.html" %}
+{% block content %}
+<script src="//d3js.org/d3.v3.min.js"></script>
+<style>
+.info-box {
+	border-radius:25px;
+	border-color:white;
+	padding: 5px;
+	border-width:10px;
+	height:300px;
+	border-style:solid;
+	position: relative;
+	display:inline;
+	float:left;
+}
+.row-container {
+	position: relative;
+	width:100%;
+	height:auto; 
+	padding:5px; 
+	margin-left:5px;
+}
+.sub-title {
+	font-weight:bold;
+	text-decoration: underline;
+}
+.report-link {
+	color: black;
+}
+a:link {color: #000000; text-decoration: underline; }
+a:active {color: #0000ff; text-decoration: underline; }
+a:visited {color: #008000; text-decoration: underline; }
+a:hover {color: #ff0000; text-decoration: none; }
+</style>
+<body>
+<div class="row-container" style="">
+	<div class="info-box" style="width:40%; background-color:#00e600;">
+	<h5><strong>Welcome to The Pathology A+E Requesting Dashboard!</strong></h5>
+	<p>This Dashboard is being developed to help visualise pathology requesting data to enable a more streamlined pathology service.
+	</br>We hope that use of this dashboard will help to reduce un-necessary pathology requesting and increase efficiency.
+	</br>This Dashboard is also being used for the dashboard creator Pip Croxford's MSc Project in Health Informatics.
+	</br>For any queries relating to this dashboard please contact her at pip.croxford@heartofengland.nhs.uk or come find her in the business development unit in pathology.</p>
+	</div>
+	<div class="info-box" style="width:60%; background-color:red;">
+
+	</div>
+</div>
+<div class="row-container" style="">
+	<div class="info-box" style="width:33%; background-color: #e600ac;">
+
+	</div>
+	<div class="info-box" style="width:33%; background-color: #ff9900;">
+	<a href="../graphs/ice_n"><h4 class="sub-title">Ice Requesting Levels</h4></a>
+	<div><div style="Width:80%; float:left;"><p>Total % ICE requested so far this month for A+E:</p></div>
+	<div id="iceperc" style="Width:20%; float:right;"></div></div>
+{% load staticfiles %}
+    <a href="../graphs/ice_n"><img src ="{% static "images/ice_n.png" %}" alt="My image" style="width: 100%;"/></a>
+	</div>
+	<div class="info-box" style="width:33%; background-color: #0066ff; display:inline; position: relative;">
+	<h4 class="sub-title">Monthly Reports</h4>
+	<p class="report-link"><a href="{% static "monthly_reports/september report.doc" %}" alt="My image">September Report</a></p>
+	<p class="report-link"><a href="{% static "monthly_reports/October report.doc" %}" alt="My image">October Report</a></p>
+	<p class="report-link"><a href="{% static "monthly_reports/november report.doc" %}" alt="My image">November Report</a></p>
+	<p class="report-link"><a href="{% static "monthly_reports/December report.doc" %}" alt="My image">December Report</a></p>
+	</div>
+</div>
+</body>
+<script>
+var ice={{ice_percent|safe}};
+var iceperc = d3.select("#iceperc")
+	.selectAll("div")
+	.data([1])
+	.enter()
+	.append("div");		
+iceperc.text(ice + " %").style("font-size","25px");
+
+</script>
+{% endblock %}

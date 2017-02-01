@@ -1,0 +1,27 @@
+{% extends "gp_nav_bar.html" %}
+{% block content %}
+<style>
+.divbox{
+	width: 40%;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    text-align: center;
+	margin-left:5%;
+	margin-right:5%;
+}
+</style>
+<body>
+<div class="divbox" style="float:left;">
+{% load staticfiles %}
+<p>This Bar chart will display a count of the most requested tests for any GP </p>
+<a href="../rlevels/by_location/"><img src ="{% static "images/level_by_locationgp.png" %}" alt="My image" style="width: 100%;"/></a>
+</div>
+<div class="divbox" style="float:right;">
+{% load staticfiles %}
+<p>Boxplots Displaying Test Requesting Variance in relation to an Individual GP's Requesting Level</p>
+<a href="../rlevels/boxplots/"><img src ="{% static "images/gp_boxplot.png" %}" alt="My image" style="width: 100%;"/></a>
+
+</div>
+</body>
+
+
+{% endblock %}

@@ -1,0 +1,177 @@
+{% extends "nav_bar.html" %}
+{% block content %}
+<script src="//d3js.org/d3.v3.min.js"></script>
+<style>
+.axis path,
+.axis line {
+	fill: none;
+	stroke: black;
+	shape-rendering: crispEdges;
+}
+.axis text {
+	font-family: sans-serif;
+	font-size: 11px;
+}
+.axis_label{
+	font-family: sans-serif;
+	font-size: 11px;
+}
+.title {
+	font-family: sans-serif;
+	font-size: 14px;
+	text-decoration: underline;
+	text-anchor: middle;
+	font-weight: bold;
+}
+.date_input{
+	height:20px;
+	width:130px;
+}
+.text_input{
+	height:20px;
+	width:70px;
+}
+.sidebox{
+	width:20%;
+	background-color:#ccffff; 
+	float:right;
+	padding:5px;
+	font-size:11px;
+}
+.keybox{
+	font-size:14px;
+}
+</style>
+<body>
+<form action="/AE/ice/" method="get">
+Start Date: 
+<input class="date_input" type="text" name="start" id="datepicker1" min="2016-07-01" value={{start}}>
+End Date:
+<input class="date_input" type="text" name="end" id="datepicker2" min="2016-07-01" value={{end}}> 
+<input type="submit" value="Submit" />
+</form>
+
+<svg class="chart"></svg>
+<div class ="sidebox" id = "sidebox">
+<h3>Arrival Type</h3>
+<div class="keybox" id="keybox"></div>
+<br>
+<p>To Reverse Graph and See Percentages NOT Requested Through Ice <a href="/graphs/not_ice/">Click Here</a></p>
+</div>
+</body>
+<script>
+var raw_data={{data|safe}},
+	data={{data|safe}},
+	start="{{start|safe}}",
+	end="{{end|safe}}";
+	
+var color = d3.scale.category20c();
+var colour=["#80F31F", "#D5078E", "#01BECA", "#E49C03", "#6917ED", "#3BFD5B", "#FA2E48", "#0F79F5", "#ABDA09", "#B001B9"];
+
+parseDate = d3.time.format("%Y-%m-%d").parse //date parser
+function addDays(date, days) {				//Date add function
+    var result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;};
+
+function addVectors(vec1, vec2) {var temp=[]; for (n=0; n<vec1.length; n++) {temp.push(vec1[n]+vec2[n]);}; return temp; };	
+	
+var daysdiff=(parseDate(end)-parseDate(start))/(1000*60*60*24);
+
+var arrival_types=_.keys(data[_.keys(data)[0]]);
+arrival_types.splice(arrival_types.indexOf("total_count"),1)	//removing total count from arrival types
+
+var dates=_.keys(raw_data).sort();		//sorting by date
+dates.unshift(dates[0]);		//double first and last date so the line can be set to 0 for pretty colours
+dates.push(dates[dates.length-1]);
+var p_dates=_.map(dates, parseDate),
+	count=_.map(dates, function(date) {return raw_data[date]['total_count'];});
+
+var sorted_data={};
+for (i=0; i<arrival_types.length; i++) {
+sorted_data[i]=_.map(dates, function(date) {return Math.round((data[date][arrival_types[i]].ice*100)/data[date].total_count)});	
+sorted_data[i][0]=sorted_data[i][sorted_data[0].length-1]=0;	//first and last to 0 to close graph
+};
+var summed_data={0:sorted_data[0]};
+var i=1;
+for (i=1; i<arrival_types.length; i++) {
+summed_data[i]=addVectors(summed_data[i-1], sorted_data[i]); 
+};
+
+var margin = {top: 40, right: 30, bottom: 100, left: 60},
+    width = $(window).width()*0.75 - margin.left - margin.right,
+    height = 600 - margin.top - margin.bottom;
+
+var chart = d3.select(".chart")		//initialising chart svg
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom);
+
+var y = d3.scale.linear()	//creating x/y pixel scalers
+    .domain([100,0])
+    .range([0, height]);
+var x = d3.time.scale()
+	.domain([parseDate(start),parseDate(end)])
+	.range([0, width]);	
+
+<!--Initialising axises-->
+var xAxis = d3.svg.axis().scale(x).orient('bottom'),
+	yAxis = d3.svg.axis().scale(y).orient('left').tickSize(1);
+	
+chart.append("g")		//y axis
+		.attr("class", "axis")
+		.attr("transform", "translate("+ (margin.left - 2) +"," + margin.top +")")
+		.call(yAxis);
+
+chart.append("g")		//x axis
+		.attr("class", "axis")
+		.attr("transform", "translate( "+ margin.left +"," + (height + margin.top) +")")
+		.call(xAxis);
+		
+chart.append("text")	//x axis label
+	.attr("class", "axis_label")
+	.attr("x", width/2+margin.left)
+	.attr("y", height + margin.top + margin.bottom)
+	.style("text-anchor", "middle")
+	.text(Date);
+
+chart.append("text")	//y axis label
+	.attr("class", "axis_label")
+	.attr("transform", "translate("+(margin.left/2) +","+(height/2 + margin.top)+")rotate(270)")	//without this rotates relative to 0,0 on shart which loses the text off screen... LAME!!
+	.style("text-anchor", "middle")
+	.text("Percentage of Requests made through ICE");
+
+chart.append("text")	//title
+	.attr("class", "title")
+	.attr("x", width/2 + margin.left)
+	.attr("y", margin.top/2-8)
+	.text("Percentage of Requests from A+E made through ICE Requesting between " + start + " and " + end);			
+		
+for (k=0; k<arrival_types.length; k++) {
+var	line = d3.svg.line()							//Adding lines
+	.x(function(d,i){return x(parseDate(dates[d]))})
+	.y(function(d,i){return y(summed_data[arrival_types.length-k-1][d])})
+	.interpolate("linear");
+	
+chart.append("path")	
+	.attr("class", arrival_types[arrival_types.length-k-1])
+	.attr("d", line(_.range(dates.length)))
+	.attr("stroke", colour[arrival_types.length-k-1])
+	.attr("stroke-width", 1)
+	.attr("fill", colour[arrival_types.length-k-1])
+	.attr("transform", "translate(" + margin.left +","+ margin.top +")");
+}
+
+var key = d3.select("#keybox")
+	.selectAll("div")
+	.data(arrival_types)
+	.enter()
+	.append("div");
+	
+key.attr("height", 20)
+	.style("background-color", function(d,i) {return colour[arrival_types.length-i-1];})
+	.attr("class", function(d,i) {return arrival_types[arrival_types.length-i-1];})
+	.attr("id", function(d,i) {return arrival_types[arrival_types.length-i-1]})
+	.text(function(d, i){return arrival_types[arrival_types.length-i-1]});
+		
+</script>
+{% endblock %}

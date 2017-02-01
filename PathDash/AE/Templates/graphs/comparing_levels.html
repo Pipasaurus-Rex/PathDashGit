@@ -1,0 +1,225 @@
+{% extends "nav_bar.html" %}
+{% block content %}
+<script src="//d3js.org/d3.v3.min.js"></script>
+<style>
+.axis path,
+.axis line {
+	fill: none;
+	stroke: black;
+	shape-rendering: crispEdges;
+}
+.axis text {
+	font-family: sans-serif;
+	font-size: 11px;
+}
+.axis_label{
+	font-family: sans-serif;
+	font-size: 11px;
+}
+.title {
+	font-family: sans-serif;
+	font-size: 14px;
+	text-decoration: underline;
+	text-anchor: middle;
+	font-weight: bold;
+}
+.date_input{
+	height:20px;
+	width:130px;
+}
+.text_input{
+	height:20px;
+	width:70px;
+}
+.sidebox{
+	width:20%;
+	background-color:#ccffff; 
+	float:right;
+	padding:5px;
+	font-size:11px;
+}
+.keybox{
+	font-size:11px;
+}
+</style>
+
+<body>
+<form action="/AE/compare/" method="get">
+Start Date: 
+<input class="date_input" type="text" name="start" id="datepicker1" min="2016-07-01" value={{start}}>
+End Date:
+<input class="date_input" type="text" name="end" id="datepicker2" min="2016-07-01" value={{end}}> 
+Set:
+<select name="set" value={{set}} />
+<option value={{set}}>{{set}}</option>
+<option value="All">All</option>
+{% for item in set_list %}
+<option value="{{item}}">{{item}}</option>
+{% endfor %}
+</select>
+Sort By:
+<select name="splitby" value={{splitby}}>
+<option value={{splitby}}>{{splitby}}</option>
+<option value="ice">Ice Requestor</option>
+<option value="cons">Attending Consultant</option>
+<option value="clin">Attending Clinician</option>
+</select>
+<input type="submit" value="Submit" />
+</form>
+
+<svg class="chart"></svg>
+<div class ="sidebox" id = "sidebox">
+<h3>Diagnosis Type</h3>
+<p>Taken from ICD10 Diagnosis Prefix</p>
+
+</div>
+</body>
+<script>
+var data={{data|safe}},
+	icds={'NoDiagnosis':'No Diagnosis', 'AB':'Infectious and Parasitic Diseases', 'C':'Neoplasms', 'D':'Neoplasms, Blood, Blood-forming Organs', 'E':'Endocrine, Nutritional, Metabolic', 'F':'Mental and Behavioral Disorders', 'G':'Nervous System', 'H':'Eye and Adnexa, Ear and Mastoid Process', 'I':'Circulatory System', 'J':'Respiratory System', 'K':'Digestive System', 'L':'Skin and Subcutaneous Tissue', 'M':'Musculoskeletal and Connective Tissue', 'N':'Genitourinary System', 'O': 'Pregnancy, Childbirth and the Puerperium', 'P':'Certain Conditions Originating in the Perinatal Period', 'Q': 'Congenital Malformations, Deformations and Chromosomal Abnormalities', 'R':  'Symptoms, Signs and Abnormal Clinical and Lab Findings', 'S':  'Injury, Poisoning, Certain Other Consequences of External Causes', 'T':  'Injury, Poisoning, Certain Other Consequences of External Causes', 'VWXY':  'External Causes of Morbidity', 'Z': 'Factors Influencing Health Status and Contact with Health Services'},
+	maxsetlength=20,
+	set_exp="{{set_exp|safe}}",
+	splitby="{{splitby|safe}}",
+	start="{{start|safe}}",
+	end="{{end|safe}}";
+
+function sum(array) {var temp = 0;
+for (i=0; i<array.length; i++) {
+temp+=array[i];
+}; return temp};
+
+parseDate = d3.time.format("%Y-%m-%d").parse;
+formatDate = d3.time.format("%d-%m-%Y");
+
+var clins=_.keys(data),
+	clincount=_.map(clins, function(d) {return sum(_.values(data[d]));}),
+	pairs=_.zip(clins, clincount);
+	pairs.sort(function(first, second) {return second[1] - first[1];});	
+
+if(clins.length<maxsetlength) {var setlength=clins.length;} else {var setlength=maxsetlength;};
+
+var margin = {top: 40, right: 30, bottom: 50, left: 60},
+    width = $(window).width()*0.78 - margin.left - margin.right,	
+	height = $(window).height()*0.8 - margin.top - margin.bottom
+	barWidth = width/setlength;
+	
+var y = d3.scale.linear()
+    .domain([pairs[0][1],0])
+    .range([0, height]);
+var x = d3.scale.ordinal()
+    .domain(_.map(pairs, function(d,i) {return pairs[i][0]}).slice(0,setlength))
+    .rangePoints([0, width],1);	
+
+<!--Initialising axises-->
+var xAxis = d3.svg.axis().scale(x).orient('bottom');	
+var yAxis = d3.svg.axis().scale(y).orient('left').tickSize(5); 
+
+var chart = d3.select(".chart")		//initialising chart svg
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+	
+// Add a group for each column.
+var bargroup = chart.selectAll("g.bargroup")
+	.data(_.range(setlength))
+	.enter().append("svg:g")
+	.attr("class", "bargroup")
+	.attr("transform", function(d, i) { return "translate(" + (margin.left + (i * barWidth)) + "," + margin.top + ")"; });
+
+var y_val=Array(setlength);
+for(i=0; i<setlength; i++) {y_val[i]=0};
+var colour=["#80F31F", "#D5078E", "#01BECA", "#E49C03", "#6917ED", "#3BFD5B", "#FA2E48", "#0F79F5", "#ABDA09", "#B001B9", "#0CE0A2", "#F97014", "#4036FC", "#64FC33", "#E71273", "#02A5DE", "#D1B601", "#850ADC", "#26F776", "#FE4531", "#1E5EFD", "#91EB15"]
+var color = d3.scale.category20();	
+
+for(i=0; i<_.keys(icds).length; i++){
+//console.log(y_val[0]);	
+for(j=0; j<setlength; j++){
+if(isNaN(y(data[pairs[j][0]][_.keys(icds)[i]]))) {} else {y_val[j]+=data[pairs[j][0]][_.keys(icds)[i]];};}
+bargroup.append("rect")
+	.attr("y", function(d) {return y(y_val[d]);})
+	.attr("class", _.keys(icds)[i])
+	.attr("height", function(d) {if(isNaN(data[pairs[d][0]][_.keys(icds)[i]])) {} else {return height - y(data[pairs[d][0]][_.keys(icds)[i]])}})
+	.attr("width", barWidth)
+	.attr("fill", colour[i])
+	.attr("stroke", "black")
+	.attr("stroke-width", 1)
+	.on("mouseover", function (d,i) {mouseover(this.getAttribute('class'));})
+	.on("mouseout", function (d,i) {mouseout(this.getAttribute('class'));});
+};
+
+bargroup.append("text")		//Adding empty groups above bars for counting
+	.attr("class", "count")
+	.style("text-anchor", "middle")
+	.attr("transform", function(d,i) {return "translate("+(barWidth/2)+", "+ (y(y_val[i]) - 5) +")"})
+	.text("");
+	
+<!--adding axis-->
+chart.append("g")		//x axis  DONT PUT STROKE IN makes text look shitty if axis lines missing do seperately
+	.attr("class", "x axis")
+	.attr("transform", "translate( "+ margin.left +"," + (height + margin.top) +")")
+	.call(xAxis)
+	.selectAll("text")
+	.attr("class", "xtext")
+	.style("text-anchor", "start")
+	.attr("transform", "translate(" + 12 +", 5)rotate(90)");
+	
+chart.append("g")		//y axis
+	.attr("class", "y axis")
+	.attr("transform", "translate("+ (margin.left - 2) +"," + margin.top +")")
+	.call(yAxis);
+	
+chart.append("text")	//x axis label
+	.attr("class", "axis_label")
+	.attr("x", width/2+margin.left)
+	.attr("y", height + margin.top + margin.bottom)
+	.style("text-anchor", "middle")
+	.text(splitby);
+
+chart.append("text")	//y axis label
+	.attr("class", "axis_label")
+	.attr("transform", "translate("+(margin.left/2) +","+(height/2 + margin.top)+")rotate(270)")	//without this rotates relative to 0,0 on shart which loses the text off screen... LAME!!
+	.style("text-anchor", "middle")
+	.text("Count of Tests");
+	
+chart.append("text")	//title
+	.attr("class", "title")
+	.attr("x", width/2 + margin.left)
+	.attr("y", margin.top/2-8)
+	.text("Bar Plot of " + set_exp + " Tests Requested by " + splitby + " From A+E");	
+
+chart.append("text")	//title
+	.attr("class", "title")
+	.attr("x", width/2 + margin.left)
+	.attr("y", margin.top/2+8)
+	.text("Between " + formatDate(parseDate(start)) + " and "+ formatDate(parseDate(end)));	
+
+var key = d3.select("#sidebox")
+	.selectAll("div")
+	.data(_.keys(icds))
+	.enter()
+	.append("div");
+	
+key.attr("height", 20)
+	.style("background-color", function(d,i) {return colour[i];})
+	.attr("class", function(d,i) {return d;})
+	.attr("id", function(d) {return d})
+	.text(function(d){return icds[d]})
+	.on("mouseover", function(d,i) {return mouseover(d)})
+	.on("mouseout", function(d,i) {return mouseout(d)});
+
+function mouseover(icd) {
+var temp_class="."+icd; 
+d3.selectAll(temp_class).style("stroke", "yellow").style("stroke-width", 4);
+d3.selectAll(".count").text(function (d,i) {return data[pairs[i][0]][icd]});
+d3.select("#"+icd).style("font-size", "20px");
+};
+
+function mouseout(icd) {
+var temp_class="."+icd; 
+d3.selectAll(temp_class).style("stroke", "black").style("stroke-width", 1);
+d3.selectAll(".count").text("");
+d3.select("#"+icd).style("font-size", "11px");
+}
+	
+	
+</script>
+{% endblock %}

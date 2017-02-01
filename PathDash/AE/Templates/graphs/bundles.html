@@ -1,0 +1,71 @@
+{% extends "gp_nav_bar.html" %}
+{% block content %}
+<style>
+.axis path,
+.axis line {
+	fill: none;
+	stroke: black;
+	shape-rendering: crispEdges;
+}
+.axis text {
+	font-family: sans-serif;
+	font-size: 11px;
+}
+.axis_label{
+	font-family: sans-serif;
+	font-size: 11px;
+}
+.date_input{
+	height:20px;
+	width:130px;
+}
+.text_input{
+	height:20px;
+	width:70px;
+}
+.sidebox{
+	width:20%;
+	background-color:#ccffff; 
+	float:right;
+	padding:5px;
+}
+.title {
+	font-family: sans-serif;
+	font-size: 12px;
+	text-decoration: underline;
+	text-anchor: middle;
+	font-weight: bold;
+}
+.button {
+	height:50px;
+	background-color:#ccffff; 
+	margin:5px;
+	padding:15px;
+	border: 2px solid red;
+	border-radius: 5px;
+	float:left;
+	
+}
+</style>
+<body>	
+<form action="/gp/rlevels/boxplots/" method="get">
+Start Date: 
+<input class="date_input" type="text" name="start" id="datepicker1" min="2016-07-01" value={{start}}>
+End Date:
+<input class="date_input" type="text" name="end" id="datepicker2" min="2016-07-01" value={{end}}> 
+Location:
+<select multiple>
+  <option value="volvo">Volvo</option>
+  <option value="saab">Saab</option>
+  <option value="opel">Opel</option>
+  <option value="audi">Audi</option>
+</select>
+<input type="submit" value="Submit" />
+</form>
+<svg class="chart"></svg>
+
+</body>
+<script>
+</script>
+
+{% endblock %}

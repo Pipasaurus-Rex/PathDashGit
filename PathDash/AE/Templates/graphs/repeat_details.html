@@ -1,0 +1,228 @@
+{% extends "nav_bar.html" %}
+{% block content %}
+<script src="//d3js.org/d3.v3.min.js"></script>
+
+<style>
+.axis path,
+.axis line {
+	fill: none;
+	stroke: black;
+	shape-rendering: crispEdges;
+}
+.axis text {
+	font-family: sans-serif;
+	font-size: 11px;
+}
+.axis_label{
+	font-family: sans-serif;
+	font-size: 11px;
+}
+.title {
+	font-family: sans-serif;
+	font-size: 14px;
+	text-decoration: underline;
+	text-anchor: middle;
+	font-weight: bold;
+}
+.sidebox{
+	width:20%;
+	background-color:#ccffff; 
+	float:right;
+}
+div.divver {
+    background: white;
+    border:solid black;
+    position: absolute;
+    text-align:center;
+	font-family: sans-serif;
+}
+.sidetitle{
+	font-family: sans-serif;
+	font-size: 13px;
+	font-weight: 700;
+	text-decoration: underline;	
+	text-anchor: middle;
+}
+.subtitle{
+	font-family: sans-serif;
+	font-size: 12px;
+	font-weight: 700;
+	text-decoration: underline;
+	text-anchor: middle;
+}
+.subtext{
+	font-family: sans-serif;
+	font-size: 11px;
+	font-weight: normal;
+}
+.int_box{
+	border-style:solid;
+	border-width: 2px 2px 0px 2px;
+	border-color: black;
+	padding: 10px 10px 10px 10px;
+}
+.date_input{
+	height:20px;
+	width:130px;
+}
+.text_input{
+	height:20px;
+	width:50px;
+}
+div.tooltip {
+	padding-top: 10px;
+	padding-left: 10px;
+	padding-right: 10px;
+    background: white;
+    border:solid black;
+    position: absolute;
+    text-align:center;
+	font-family: sans-serif;
+}
+</style>
+
+<body>
+<form action="./" method="get" class="form">
+Start Date: 
+<input class="date_input" type="text" name="start" id="datepicker1" min="2016-07-01" value={{start}}>
+End Date:
+<input class="date_input" type="text" name="end" id="datepicker2" min="2016-07-01" value={{end}}> 
+Repeated Within:
+<input class="text_input" type="text" name="mins" value={{mins}} />
+Minutes
+<select name="set" value={{set}} />
+<option value={{set}}>{{set}}</option>
+{% for item in set_list %}
+<option value="{{item}}">{{item}}</option>
+{% endfor %}
+</select>
+Bins:
+<input class="text_input" type="number" name="bins" id="bins" min="0" max="100" step="1" value={{bins}}></input>
+<input type="submit" value="Submit" />
+</form>
+<div class="wrap">
+<svg class="chart"></svg>
+<div class="sidebox">
+<p class="sidetitle">Minimum Retesting Intervals</p><span class='glyphicon glyphicon-question-sign' aria-hidden="true" id="querytip"></span>
+{% for set, clinical_cond, recommendation, time in int_data %}
+<div class="int_box">
+<p class="subtitle">Clinical Situation</p>
+<p class="subtext">{{clinical_cond}}</p>
+<p class="subtitle">Recommendation</p>
+<p class="subtext">{{recommendation}}</p>
+</div>
+{% endfor %}
+
+</div></div>
+</body>
+<script>
+parseDate = d3.time.format("%Y-%m-%d").parse;
+formatDate = d3.time.format("%d-%m-%Y");
+
+var data={{data|safe}},
+	set_exp="{{set_exp|safe}}",
+	mins={{mins|safe}},
+	start="{{start|safe}}",
+	end="{{end|safe}}",
+	max_time_hours=mins/60,
+	bins={{bins|safe}}-1,
+	binsize=Math.max.apply(Math, data)/bins,
+	binned=_.map(data, function(data) {return Math.floor(data/binsize);}),
+	bincount=_.countBy(binned, function(num) {return num==num? num: 'blah'});
+
+var binranges=_.map(Object.keys(bincount), function(num) {return Math.round(num*binsize)+" to "+Math.round((num*1+1)*binsize)}); //num*1+1 because was concatenating numbers :s
+
+var margin = {top: 40, right: 30, bottom: 70, left: 60},
+    width = $(window).width()*0.75 - margin.left - margin.right,
+    height = 600 - margin.top - margin.bottom
+	barWidth = width/(bins+1);	
+	
+var y = d3.scale.linear()
+    .domain([Math.max.apply(Math, _.values(bincount)),0])
+    .range([0, height]);
+var x = d3.scale.linear()
+    .domain([0, max_time_hours])
+    .range([0, width]);	
+
+<!--Initialising axises-->
+var xAxis = d3.svg.axis().scale(x).orient('bottom');	
+var yAxis = d3.svg.axis().scale(y).orient('left').tickSize(5);    
+
+var chart = d3.select(".chart")		//initialising chart svg
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom);
+
+var bar = chart.selectAll(".chart")		//putting in g bar placements for each data point
+	.data(_.range(bins + 1))
+	.enter().append("g")
+	.attr("transform", function(d, i) { return "translate(" + (margin.left + (i * barWidth)) + "," + margin.top + ")"; }); ///5 needs to be barwidth	
+
+var color = d3.scale.category20();	
+
+bar.append("rect")					//append the bars
+	.attr("class", "bars")
+	.attr("y", function(d,i){if(_.isNumber(bincount[i])) {return y(bincount[i]);} else {return y(0);};})	// basically if null here
+	.attr("width", barWidth-5)
+	.attr("height", function(d,i){if(_.isNumber(bincount[i])) {return height-y(bincount[i]);} else {return height-y(0);};;})
+	.attr("fill", "green")
+	.on("mouseover", function(d,i) {d3.select(this).style("fill", "yellow");
+	tooltip.transition().duration(200).style("opacity", .9);
+	tooltip.html(function (d,j) {return "<p>"+ bincount[i] +" Tests Repeated</p><p>Between</p><p>"+Math.round(i*binsize)+" and "+Math.round((i+1)*binsize)+"<br>Minutes</p>"})
+	.style("left",  (d3.event.pageX) + "px")
+	.style("top", (d3.event.pageY) + "px");})
+	.on("mouseout", function(d) {d3.select(this).style("fill", color(Math.round(Math.random()*20)));tooltip.style("opacity", 0);});
+
+var tooltip = d3.select("body").append("div")   
+    .attr("class", "tooltip")               
+    .style("opacity", 0);	
+
+chart.append("g")		//x axis  DONT PUT STROKE IN makes text look shitty if axis lines missing do seperately
+	.attr("class", "x axis")
+	.attr("transform", "translate( "+ margin.left +"," + (height + margin.top) +")")
+	.call(xAxis)
+	.selectAll("text")
+	.style("text-anchor", "start");	
+
+chart.append("g")		//y axis
+	.attr("class", "y axis")
+	.attr("transform", "translate("+ (margin.left - 2) +"," + margin.top +")")
+	.call(yAxis);
+	
+chart.append("text")	//x axis label
+	.attr("class", "axis_label")
+	.attr("x", width/2+margin.left)
+	.attr("y", height + margin.bottom)
+	.style("text-anchor", "middle")
+	.text("Hours Between Repeated Requests");
+
+chart.append("text")	//y axis label
+	.attr("class", "axis_label")
+	.attr("transform", "translate("+(margin.left/2) +","+(height/2 + margin.top)+")rotate(270)")	//without this rotates relative to 0,0 on shart which loses the text off screen... LAME!!
+	.style("text-anchor", "middle")
+	.text("Count of repeated Tests");
+
+var sidebox = d3.select(".sidebox")	//initialising selector SVG note:float right to get them side by side
+	.attr("width", $(window).width()*0.24)
+	.attr("height", height + margin.top + margin.bottom)
+	.style("float", "right");
+
+chart.append("text")	//title
+	.attr("class", "title")
+	.attr("x", width/2 + margin.left)
+	.attr("y", margin.top/2-8)
+	.text("Histogram of "+ set_exp +" Tests Requested Twice Within " + mins + " Minutes");	
+
+chart.append("text")	//title
+	.attr("class", "title")
+	.attr("x", width/2 + margin.left)
+	.attr("y", margin.top/2+8)
+	.text("Between " + formatDate(parseDate(start)) + " and "+ formatDate(parseDate(end)));	
+
+document.getElementById("querytip").onmouseout = function() {window.alert("Minimum Retesting Intervals taken from \nThe National Minimum Retesting Intervals in Pathology (2015) \rBy The Royal College of Pathologists \nThe Association for Clinical Biochemistry and Laboratory Medicine \nand The Institute of Biomedical Science \r\rClick the Icon to Open Link");};
+
+document.getElementById("querytip").onclick = function() {window.open('https://www.google.co.uk/url?sa=t&rct=j&q=&esrc=s&source=web&cd=2&cad=rja&uact=8&ved=0ahUKEwjbsuHuwvDOAhUMBsAKHc3-BmgQFggkMAE&url=https%3A%2F%2Fwww.rcpath.org%2Fasset%2F7A6DA597-181F-4482-B08303CE3907020D%2F&usg=AFQjCNHZKJlZ2rA2Z8ggUlyuyhksP4hZvQ&sig2=oenuo50T7OSU_yspZ9266Q')}
+	
+</script>
+
+
+{% endblock %}

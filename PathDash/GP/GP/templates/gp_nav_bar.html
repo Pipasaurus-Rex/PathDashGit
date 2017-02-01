@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Pathology Requesting Dashboard</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css"><!--nav bar looks shit without this-->
+    
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script> <!--Underscore js-->
+	<script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script><!--D3.js-->
+	  <link rel="stylesheet" href="//code.jquery.com/ui/1.12.0/themes/base/jquery-ui.css">
+  <link rel="stylesheet" href="/resources/demos/style.css">
+	<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.0/jquery-ui.js"></script>
+    <script>
+    $( function() {$( "#datepicker1" ).datepicker({dateFormat:'yy-mm-dd'});} );
+    $( function() {$( "#datepicker2" ).datepicker({dateFormat:'yy-mm-dd'});} );
+    </script>	
+</head>
+<style>
+.btn {
+	border-radius: 10px;
+	background-color: black;
+	color: white;
+	font-weight: bold;
+	height: 40px;
+	padding-left: 10px;
+	padding-right: 10px;
+	margin-top: 2px;
+	margin-right: -2px
+}
+
+.homebutt {}
+body { padding-top: 50px; }
+.rtbutton {
+	
+}
+</style>
+<header>
+<nav class="navbar navbar-default navbar-fixed-top">
+  <a href="/gp/"><button class="btn">Home</button></a>
+  <a href="/gp/cost/"><button class="btn" style="background-color:#ff0086;">Bubble Charts</button></a>
+  <a href="/gp/ice/"><button class="btn" style="background-color:#0000ff;">Ice</button></a>
+  <a href="/gp/rlevels/"><button class="btn" style="background-color:#ff9900;">Requesting Levels</button></a>
+  <div class="btn-group" style="float: right;">
+  <a href="/"><button class="btn">A+E</button></a>
+  <a href="/gp/"><button class="btn" style="background-color:#1aff1a;border-width: 3px; border-color:#000000;margin-right:10px;">GP</button></a>
+  </div>
+</nav>
+</header>
+   {% block content %}
+   {% endblock %}		
+</html>

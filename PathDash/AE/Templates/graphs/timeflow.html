@@ -1,0 +1,277 @@
+{% extends "nav_bar.html" %}
+{% block content %}
+<script src="//d3js.org/d3.v3.min.js"></script>
+<style>
+.settext {
+	font-family: sans-serif;
+	font-size: 8px;
+	stroke: black;
+}
+
+.title {
+	font-family: sans-serif;
+	font-size: 14px;
+	text-decoration: underline;
+	text-anchor: middle;
+	font-weight: bold;
+}
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+.legendtext{
+	text-anchor: middle;
+	fill: white;
+	font-weight: bold;
+}
+div.tooltip {
+    background: white;
+    border:solid black;
+    position: absolute;
+    text-align:center;
+	font-family: sans-serif;
+}
+</style>
+<body>
+<form action="/graphs/timeflow/" method="get">
+Start Date: 
+<input class="date_input" type="text" name="start" id="datepicker1" min="2016-07-01" value={{start}}>
+End Date:
+<input class="date_input" type="text" name="end" id="datepicker2" min="2016-07-01" value={{end}}> 
+Set:
+<select name="set" value={{set}} />
+<option value={{set}}>{{set}}</option>
+<option value="All">All</option>
+{% for item in set_list %}
+<option value="{{item}}">{{item}}</option>
+{% endfor %}
+</select>
+<input type="submit" value="Submit" />
+</form>
+<svg class="chart"></svg>
+<svg class="selector">
+<p>Outliers Calculated as More than 2 Standard Deviations From the Mean</p>
+</svg>
+</body>
+<script>
+alert("The data collection for this graph has been sporadic since September 25th and can't be trusted as the ICE data base I need to get the viewing times from is having some memory issues and my data queries have been deprioritised")
+
+var use_set="{{set|safe}}",
+	start="{{start|safe}}",
+	end="{{end|safe}}";
+var raw_data={{data|safe}};
+parseDate = d3.time.format("%Y-%m-%d").parse //date parser
+
+function addDays(date, days) {				//Date add function
+    var result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;}
+
+var dats=[parseDate(start), parseDate(start)]
+
+var dates=_.keys(raw_data).sort();		//sorting by date
+dates.unshift(dates[0]);		//double first and last date so the line can be set to 0 for pretty colours
+dates.push(dates[dates.length-1]);
+var p_dates=_.map(dates, parseDate)	// parsing date
+	travel=_.map(dates, function(date) {return raw_data[date]["travel"];})
+	inlab=_.map(dates, function(date) {return raw_data[date]["inlab"];})
+	toview=_.map(dates, function(date) {return raw_data[date]["toview"];})
+	count=_.map(dates, function(date) {return raw_data[date]["count"];})
+	total=_.map(dates, function(date) {return raw_data[date]["toview"]+raw_data[date]["travel"]+raw_data[date]["inlab"];})
+	sub_total=_.map(dates, function(date) {return raw_data[date]["travel"]+raw_data[date]["inlab"];})
+	outliers=_.map(dates, function(date) {return raw_data[date]["outliers"];});
+travel[0]=travel[travel.length-1]=0;	//making fist and last date double =0 to close graph ends
+total[0]=total[total.length-1]=0;
+sub_total[0]=sub_total[sub_total.length-1]=0;
+
+var data = {'travel':travel, 'inlab':inlab, 'toview':toview, 'count':count, 'total':total, 'sub_total':sub_total, 'dates':p_dates, 'sets':_.keys(data).sort(), 'outliers':outliers};
+
+	
+var margin = {top: 40, right: 30, bottom: 100, left: 60},
+    width = $(window).width()*0.75 - margin.left - margin.right,
+    height = 600 - margin.top - margin.bottom;
+
+function stringenate(blah, texttitle) {
+	if (_.keys(blah).length==0) {var str="";} else {var str="<br><b>"+texttitle+"</b>";};
+	for (i in blah) {str=str.concat("<br>" + blah[i].PID + ": " + blah[i].time + "mins");};
+	return str;
+};	 
+	
+
+var chart = d3.select(".chart")		//initialising chart svg
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+	.on("mouseover", function() { focus.style("display", null); focus2.style("display", null); focus3.style("display", null);
+	tooltip.transition().duration(200).style("opacity", .9).style("left",  margin.left + "px").style("top", (margin.top + 50) +"px");})
+    .on("mouseout", function() {focus.style("display", "none"); focus2.style("display", "none"); focus3.style("display", "none"); tooltip.style("opacity", 0);})
+	.on("mousemove", mousemove);
+
+var tooltip = d3.select("body").append("div")   
+    .attr("class", "tooltip")               
+    .style("opacity", 0)
+	.html("<p>test</p>");
+	
+	
+var y = d3.scale.linear()	//creating x/y pixel scalers
+    .domain([Math.max.apply(Math, data.total),0])
+    .range([0, height]);
+var x = d3.time.scale()
+	.domain([Math.min.apply(Math, data.dates),Math.max.apply(Math, data.dates)])
+	.range([0, width]);
+	
+<!--Initialising axises-->
+var xAxis = d3.svg.axis().scale(x).orient('bottom'),
+	yAxis = d3.svg.axis().scale(y).orient('left').tickSize(1);
+	
+var	totalfunc = d3.svg.line()
+	.x(function(d) { return x(data.dates[d]); })
+	.y(function(d) { return y(data.total[d]); })
+	.interpolate("linear");
+	
+chart.append("path")	
+	.attr("class", "line")
+	.attr("d", totalfunc(_.range(data.dates.length)))
+	.attr("stroke", "black")
+	.attr("stroke-width", 1)
+	.attr("fill", "blue")
+	.attr("transform", "translate(" + margin.left +","+ margin.top +")");
+	
+var	subfunc = d3.svg.line()
+	.x(function(d) { return x(data.dates[d]); })
+	.y(function(d) { return y(data.sub_total[d]); })
+	.interpolate("linear");
+	
+chart.append("path")	
+	.attr("class", "line")
+	.attr("d", subfunc(_.range(data.dates.length)))
+	.attr("stroke", "black")
+	.attr("stroke-width", 1)
+	.attr("fill", "purple")
+	.attr("transform", "translate(60, 40)");
+
+var	botfunc = d3.svg.line()
+	.x(function(d) { return x(data.dates[d]); })
+	.y(function(d) { return y(data.travel[d]); })
+	.interpolate("linear");
+	
+chart.append("path")	
+	.attr("class", "line")
+	.attr("d", botfunc(_.range(data.dates.length)))
+	.attr("stroke", "black")
+	.attr("stroke-width", 1)
+	.attr("fill", "green")
+	.attr("transform", "translate(60, 40)");
+	
+chart.append("g")		//y axis
+		.attr("class", "axis")
+		.attr("transform", "translate("+ (margin.left - 2) +"," + margin.top +")")
+		.call(yAxis);
+
+chart.append("g")		//x axis
+		.attr("class", "axis")
+		.attr("transform", "translate( "+ margin.left +"," + (height + margin.top) +")")
+		.call(xAxis)
+		.selectAll("text")
+		.style("text-anchor", "start")
+		.attr("transform", "rotate(45)");	
+
+chart.append("text")	//y axis label
+	.attr("class", "axis_label")
+	.attr("transform", "translate("+((margin.left/2)-10) +","+(height/2 + margin.top)+")rotate(270)")	//without this rotates relative to 0,0 on shart which loses the text off screen... LAME!!
+	.style("text-anchor", "middle")
+	.text("Minutes Since Specimen Collected");		
+		
+chart.selectAll(".xaxis text")		//rotate x axis text
+		.attr("transform", function(d) {return "translate(" + this.getBBox().height*-2 + "," + this.getBBox().height + ")rotate(-45)";});
+
+chart.append("text")	//title
+	.attr("class", "title")
+	.attr("x", width/2 + margin.left)
+	.attr("y", margin.top/2)
+	.style("text-anchor", "middle")
+	.text("Mean Time Taken in Specimen Stages for " + use_set + " Tests from A+E in the Last Month");	
+
+var focus=chart.append("g")
+	.attr("class", "focus")
+	.style("display", "none");	
+	
+focus.append("circle")
+      .attr("r", 4.5)
+	  .attr("fill", "yellow")
+	  .attr("stroke", "black");	
+
+var focus2=chart.append("g")
+	.attr("class", "focus2")
+	.style("display", "none");	
+	
+focus2.append("circle")
+      .attr("r", 4.5)
+	  .attr("fill", "yellow")
+	  .attr("stroke", "black");	  
+	  
+var focus3=chart.append("g")
+	.attr("class", "focus")
+	.style("display", "none");	
+	
+focus3.append("circle")
+      .attr("r", 4.5)
+	  .attr("fill", "yellow")
+	  .attr("stroke", "black");	  
+	  
+
+		
+function mousemove() {
+	formatDate = d3.time.format("%a-%d-%B-%Y") //lower case abbreviates
+	var x0 = x.invert(d3.mouse(this)[0])
+		formdates=_.map(data.dates, formatDate)
+		datemap=_.map(data.dates.slice(1,(data.dates.length-1)),x)
+		intwidth=x(addDays(data.dates[0], 1))-x(data.dates[0])
+		intval=Math.round((d3.mouse(this)[0]-margin.left)/intwidth)
+		indexval=_.indexOf(formdates, formatDate(addDays(parseDate(start), intval)))
+		tooltipdate=formatDate(data.dates[indexval]);
+	
+	focus.attr("transform", "translate("+((intval*intwidth)+margin.left)+","+(y(data.total[indexval])+margin.top)+")");
+	focus2.attr("transform", "translate("+((intval*intwidth)+margin.left)+","+(y(data.sub_total[indexval])+margin.top)+")");
+	focus3.attr("transform", "translate("+((intval*intwidth)+margin.left)+","+(y(data.travel[indexval])+margin.top)+")");
+	if(intval<0 || intval>data.dates.length+111) {tooltip.html("");}
+	else {tooltip.html("<p><b>"+ tooltipdate +"</b></p><p>Mean Mins in Transport: "+ data.travel[intval+1] +"</p><p>Mean Mins in Lab: "+ data.inlab[intval+1] +"</p><p>Mean Mins to View: "+ data.toview[intval+1] +"</p>" + "<p>Number of Requests: "+ data.count[intval+1] +"</p>" + stringenate(data.outliers[intval+1].travel, "Travel Outliers") + stringenate(data.outliers[intval+1].inlab, "Laboratory Outliers") + stringenate(data.outliers[intval+1].toview, "Viewing Outliers")
+	);};
+};	  
+
+var selector = d3.select(".selector")	//initialising selector SVG note:float right to get them side by side
+	.attr("width", $(window).width()*0.2)
+	.attr("height", height + margin.top + margin.bottom)
+	.style("float", "right");
+
+//Legend Stuff
+var colours=["blue", "purple", "green"],	//data for legend
+	labels=["Waiting for View", "Lab Processing", "In Transport"];
+var why=selector.append("g"); // why does removing this break legend?
+
+var legend=selector.selectAll("g")	//legend group
+	.attr("class", "legend");
+var legsquare=legend.selectAll("g")	//colour rects group
+	.data([0,1,2]).enter().append("g")
+	.attr("transform", function(d,i) {return "translate(0, " + ((i*30)+30) + ")"});
+
+legsquare.append("rect")	//Boxes
+	.attr("height", 30)
+	.attr("width", $(window).width()*0.2)
+	.attr("fill", function(d,i) {return colours[i]});
+	
+legsquare.append("text")	//legend text
+	.attr("class", "legendtext")
+	.attr("transform", "translate("+ ($(window).width()*0.1) +", 20)")
+	.text(function(d,i) {return labels[i]});
+
+legend.append("text")		//legend title
+	.text("Legend")
+	.attr("class", "title")
+	.attr("transform", "translate("+ ($(window).width()*0.1) +", 20)");
+	
+
+
+</script>
+{% endblock %}

@@ -1,0 +1,278 @@
+{% extends "gp_nav_bar.html" %}
+{% block content %}
+<style>
+.axis path,
+.axis line {
+	fill: none;
+	stroke: black;
+	shape-rendering: crispEdges;
+}
+.axis text {
+	font-family: sans-serif;
+	font-size: 11px;
+}
+.axis_label{
+	font-family: sans-serif;
+	font-size: 11px;
+}
+.date_input{
+	height:20px;
+	width:130px;
+}
+.text_input{
+	height:20px;
+	width:70px;
+}
+.sidebox{
+	width:20%;
+	background-color:#ccffff; 
+	float:right;
+	padding:5px;
+}
+.title {
+	font-family: sans-serif;
+	font-size: 12px;
+	text-decoration: underline;
+	text-anchor: middle;
+	font-weight: bold;
+}
+.button {
+	height:50px;
+	background-color:#ccffff; 
+	margin:5px;
+	padding:15px;
+	border: 2px solid red;
+	border-radius: 5px;
+	float:left;
+	
+}
+</style>
+<body>	
+<form action="/gp/rlevels/boxplots/" method="get">
+Start Date: 
+<input class="date_input" type="text" name="start" id="datepicker1" min="2016-07-01" value={{start}}>
+End Date:
+<input class="date_input" type="text" name="end" id="datepicker2" min="2016-07-01" value={{end}}> 
+Location:
+<select name="loca" id="loca" value={{loca}}>
+<option value={{loca}}>{{loca}}</option>
+{% for item, exp in loc_list %}
+<option value="{{item}}">{{exp}}</option>
+{% endfor %}
+</select>
+<input type="submit" value="Submit" />
+</form>
+<svg class="chart"></svg>
+<div class="Botbar" style="width:100%; height:60px; padding:5px;">
+<div id="norm" class="button"></div><div id="back" class="button"><p>Go Back 20 Tests</p></div><div class="button" id="forward"><p>View Next 20 Tests</p></div>
+<div>
+<p>Standardising the Data Divides the Number of Tests by the Number of Patients in the GP Practice</p>
+<p>Click the Bars to Investigate Test Distribution in More Detail</p>
+</div>
+</div>
+
+</body>
+<script>var data={{data|safe}},
+	num_locs="{{num_locs|safe}}",
+	barcol="Red",
+	normalised=true,
+	start_index=0,
+	start="{{start|safe}}",
+	end="{{end|safe}}";
+	loc_exp={{loc_exp|safe}};
+	
+var margin = {top: 40, right: 30, bottom: 30, left: 60},
+    width = $(window).width()*1 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+var chart = d3.select(".chart")		//initialising chart svg
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)	
+	
+function mid(a,b) {return ((b-a)/2)+a;};
+
+parseDate = d3.time.format("%Y-%m-%d").parse;		//date formatting
+formatDate = d3.time.format("%d-%m-%Y");
+
+function median(input) {
+if (input.length % 2 != 0) {return input.sort(d3.ascending)[(input.length-1)/2];}
+else {return mid(input.sort(d3.ascending)[(input.length/2)-1],input.sort(d3.ascending)[input.length/2])};
+};
+	
+function LQ(input) {
+if (input.length % 4 == 0) {return mid(input.sort(d3.ascending)[(input.length/4)-1], input.sort(d3.ascending)[input.length/4]);}
+else if (input.length % 2 == 0) {return input.sort(d3.ascending)[Math.floor(input.length/4)];}
+else if ((input.length-1) % 4 ==0) {return mid(input.sort(d3.ascending)[((input.length-1)/4)], input.sort(d3.ascending)[((input.length-1)/4)-1]);}
+else {return input.sort(d3.ascending)[Math.floor(input.length/4)]};};
+
+function UQ(input) {
+if (input.length % 4 == 0) {return mid(input.sort(d3.ascending)[(input.length*0.75)-1], input.sort(d3.ascending)[input.length*0.75]);}
+else if (input.length % 2 == 0) {return input.sort(d3.ascending)[Math.floor(input.length*0.75)];}
+else if ((input.length-1) % 4 ==0) {return mid(input.sort(d3.ascending)[Math.floor(input.length*0.75)], input.sort(d3.ascending)[Math.ceil(input.length*0.75)]);}
+else {return input.sort(d3.ascending)[Math.floor(input.length*0.75)]};};	
+	
+var tests = Object.keys(data);
+tests.splice(tests.indexOf("SI"),1)		//removing patient SI from test list
+tests = tests.sort(function(a,b) {return data[b].loc_value-data[a].loc_value}) //sorting by max value
+
+function draw(first, last) {	
+
+var num_bars=last-first,
+	barWidth = width/num_bars,
+    test_arr=tests.slice(first, last);	
+
+if 	(normalised==true) { 
+	var UQs=_.map(test_arr, function(n) {return UQ(data[n].norm_count);}),
+		LQs=_.map(test_arr, function(n) {return LQ(data[n].norm_count);}),
+		medians=_.map(test_arr, function(n) {return median(data[n].norm_count);}),
+		loc_values=_.map(test_arr, function(n) {if(data[n].norm_loc_value.length>0) {return data[n].norm_loc_value[0];} else {return 0};;}),
+		topval=_.map(_.range(num_bars), function(n) {var temp=(UQs[n]-LQs[n])*1.5+UQs[n]; return temp;}),
+		y_label="Number of Tests Sent per Registered Patient";
+	} else {
+	var UQs=_.map(test_arr, function(n) {return UQ(data[n].count);}),
+		LQs=_.map(test_arr, function(n) {return LQ(data[n].count);}),
+		medians=_.map(test_arr, function(n) {return median(data[n].count);}),
+		loc_values=_.map(test_arr, function(n) {if(data[n].loc_value.length>0) {return data[n].loc_value[0];} else {return 0};;}),
+		topval=_.map(_.range(num_bars), function(n) {var temp=(UQs[n]-LQs[n])*1.5+UQs[n]; return d3.max(_.filter(data[test_arr[n]].count, function(num) {return num<=temp}))}),
+		y_label="Number of Tests Sent";
+	};
+		
+var y = d3.scale.linear()
+    .domain([d3.max(topval.concat(loc_values)),0])
+    .range([0, height]);
+var x = d3.scale.ordinal()
+    .domain(tests.slice(first, last))
+    .rangePoints([0, width],1);	
+	
+<!--Initialising axises-->
+var xAxis = d3.svg.axis().scale(x).orient('bottom');	
+var yAxis = d3.svg.axis().scale(y).orient('left').tickSize(1);    
+
+var bar = chart.selectAll("g")		//putting in g bar placements for each data point
+	.data(tests.slice(0,num_bars))
+	.enter().append("g")
+	.attr("transform", function(d, i) { return "translate(" + (margin.left + 5 + (i * barWidth)) + "," + margin.top + ")"; })
+	.on("click", function(d,i) {window.location.replace("/gp/cost/costxgp/?start=" + start + "&end=" + end + "&view=Standardised+Request+Count&set="+ test_arr[i]); });	
+	
+bar.append("rect")			//adding bar to g placement
+	.attr("class", "boxplots")		//adding class for selectAll
+	.attr("y", function(d,i){return y(UQs[i]);})
+	.attr("width", barWidth -10)
+	.attr("height", function(d,i) {return y(LQs[i]) - y(UQs[i]);})
+	.attr("fill", barcol)
+	.attr("stroke", "none")
+	.on("click", function(d,i) {window.location.replace("/gp/cost/costxgp/?start=" + start + "&end=" + end + "&view=Standardised+Request+Count&set="+ test_arr[i]); });
+	
+bar.append("line")		//median line
+	.attr("class", "median")
+	.attr("x1", -1)
+	.attr("y1", function(d,i){return y(medians[i]);})
+	.attr("x2", barWidth-9)
+	.attr("y2", function(d,i){return y(medians[i]);})
+	.attr("stroke", "White")
+	.attr("stroke-width", "3px");
+	
+bar.append("line")		//top whisker vertical
+	.attr("class", "wtopv")
+	.attr("x1", barWidth/2-5)
+	.attr("y1", function(d,i){return y(UQs[i]);})
+	.attr("x2", barWidth/2-5)
+	.attr("y2", function(d,i){return y(topval[i]);})
+	.attr("stroke", barcol);
+
+bar.append("line")		//top whisker horizontal
+	.attr("class", "wtoph")
+	.attr("x1", 5)
+	.attr("y1", function(d,i){return y(topval[i]);})
+	.attr("x2", barWidth -15)
+	.attr("y2", function(d,i){return y(topval[i]);})
+	.attr("stroke", barcol);
+	
+bar.append("line")		//bottom whisker vertical
+	.attr("class", "wbotv")
+	.attr("x1", barWidth/2-5)
+	.attr("y1", function(d,i){return y(LQs[i]);})
+	.attr("x2", barWidth/2-5)
+	.attr("y2", function(d,i){return y(0);})
+	.attr("stroke", barcol);
+
+bar.append("line")		//bottom whisker horizontal
+	.attr("class", "wboth")
+	.attr("x1", 5)
+	.attr("y1", function(d,i){return y(0);})
+	.attr("x2", barWidth -15)
+	.attr("y2", function(d,i){return y(0);})
+	.attr("stroke", barcol);
+	
+bar.append("g")
+	.attr("transform", function(d, i) { return "translate(" + ((barWidth/2)-5) + "," + y(loc_values[i]) + ")"; })	
+	.append("circle")
+	.attr("class", "point")
+	.attr("r", 5)
+	.attr("fill", "yellow");
+	
+<!--adding axis-->
+chart.append("g")		//y axis
+		.attr("class", "y axis")
+		.attr("transform", "translate("+ (margin.left - 2) +"," + margin.top +")")
+		.call(yAxis);
+
+chart.append("g")		//x axis
+		.attr("class", "x axis")
+		.attr("transform", "translate( "+ margin.left +"," + (height + margin.top) +")")
+		.call(xAxis);
+
+chart.append("text")	//x axis label
+	.attr("class", "axis_label")
+	.attr("x", width/2 + margin.left)
+	.attr("y", height + margin.top + margin.bottom)
+	.style("text-anchor", "middle")
+	.text("Pathology Test Code");
+
+chart.append("text")	//y axis label
+	.attr("class", "axis_label")
+	.attr("transform", "translate("+((margin.left/2)-5) +","+(height/2 + margin.top)+")rotate(270)")	//without this rotates relative to 0,0 on shart which loses the text off screen... LAME!!
+	.style("text-anchor", "middle")
+	.text(y_label);
+	
+chart.append("text")	//chart title
+	.attr("class", "title")
+	.attr("x", width/2 + margin.left)
+	.attr("y", margin.top/2)
+	.style("text-anchor", "middle")
+	.text("Boxplot of Pathology Tests Requested Between " + formatDate(parseDate(start)) + " and " + formatDate(parseDate(end)) + " With Values for " + loc_exp + " Higlighted");
+
+if (normalised==true) {d3.select("#norm").append("div").attr("class", "n_text").text("Un-Standardise"); } else {d3.select("#norm").append("div").attr("class", "n_text").text("Standardise");};
+};
+
+function redraw(first, last) {d3.selectAll(".axis_label").remove();d3.selectAll("g").remove();d3.selectAll(".n_text").remove();draw(first, last);};
+draw(0,20);
+
+var tooltip = d3.select("body").append("div")   
+    .attr("class", "tooltip")               
+    .style("opacity", 0);
+
+var norm_button = document.getElementById('norm'),
+	back_button = document.getElementById('back'),
+	forward_button = document.getElementById('forward');
+	
+norm_button.onclick = function () {
+	if (normalised==true) {normalised=false;
+	} else {normalised=true;};
+	redraw(start_index, start_index+20);};
+
+
+forward_button.onclick = function () {
+	start_index+=20;
+	redraw(start_index, start_index+20);
+	};
+
+back_button.onclick = function () {
+	if (start_index>0) {start_index=start_index-20;};
+	redraw(start_index, start_index+20);
+	};
+
+
+</script>
+
+{% endblock %}

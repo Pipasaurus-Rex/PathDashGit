@@ -1,0 +1,28 @@
+{% extends "nav_bar.html" %}
+{% block content %}
+<style>
+.divbox{
+	width: 40%;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    text-align: center;
+	margin-left:5%;
+	margin-right:5%;
+}
+</style>
+<body>
+<h1>Repeated Tests</h1>
+Pathology request made from Accident and Emergency are frequently requested multiple times within a period that makes them unnecessary.
+We have investigated this in relation to the minimum retesting intervals defined by the The Association for Clinical Biochemistry and Laboratory Medicine in <a href="http://www.acb.org.uk/docs/default-source/guidelines/acb-mri-recommendations-a4-computer.pdf">this</a> 2015 paper.
+<div class="divbox" style="float:left;">
+{% load staticfiles %}
+We have visualised this as  a barchart counting total tests repeated within a time frame
+<a href="../AE/repeat/"><img src ="{% static "images/repeats.png" %}" alt="My image" style="width: 100%;"/></a>
+</div>
+<div class="divbox" style="float:right;">
+And as a Histogram of Specific test repeat times with Guidelines on Minimum retesting intervals Displayed Alongside.
+<a href="../AE/repeats/details/"><img src ="{% static "images/repeats_hist.png" %}" alt="My image" style="width: 100%;"/></a>
+</div>
+</body>
+
+
+{% endblock %}

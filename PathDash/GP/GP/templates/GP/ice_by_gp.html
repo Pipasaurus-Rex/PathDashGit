@@ -1,0 +1,63 @@
+{% extends "gp_nav_bar.html" %}
+{% block content %}
+<style>
+.date_input{
+	height:20px;
+	width:130px;
+}
+.text_input{
+	height:20px;
+	width:70px;
+}
+.sidebox{
+	width:20%;
+	background-color:#ccffff; 
+	float:right;
+	padding:5px;
+}
+.title {
+	font-family: sans-serif;
+	font-size: 14px;
+	text-decoration: underline;
+	text-anchor: middle;
+	font-weight: bold;
+}
+</style>
+<body>	
+<form action="/gp/cost/costxgp/" method="get">
+Start Date: 
+<input class="date_input" type="text" name="start" id="datepicker1" min="2016-07-01" value={{start}}>
+End Date:
+<input class="date_input" type="text" name="end" id="datepicker2" min="2016-07-01" value={{end}}> 
+View:
+<select name="view" value={{view}} />
+<option value={{view}}>{{view}}</option>
+<option value="Count of Requests">Count of Requests</option>
+<option value="Patients at Practice">Patients at Practice</option>
+<option value="Standardised Request Count">Standardised Request Count</option>
+</select>
+Set:
+<select name="set" id="set" value={{set}}>
+<option value={{set}}>{{set}}</option>
+<option value="tumour">Tumour Markers</option>
+{% for item, exp in set_list %}
+<option value="{{item}}">{{exp}}</option>
+{% endfor %}
+</select>
+<input type="submit" value="Submit" />
+</form>
+<svg class="chart"></svg>
+<div class="sidebox">
+<h2>{{set_exp}}</h2>
+<div id="tooltip">
+<h4>Mouse Over Chart for Tooltip Details</h4>
+</div>
+</div>
+</body>
+<script>
+
+
+
+</script>
+
+{% endblock %}
