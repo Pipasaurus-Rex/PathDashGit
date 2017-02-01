@@ -1,0 +1,5 @@
+python==2.7.13
+Django==1.10.4
+django-pyodbc-azure==1.10.4.0
+numpy==1.12.0
+pyodbc==4.0.3
